@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StudyFlow — Personalized Study Platform (Prototype)</title>
+  <style>
+    /* ========== Base / Utility ========== */
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#6ee7b7; --glass: rgba(255,255,255,0.03);
+      --radius:14px; --pad:16px; --glass-2: rgba(255,255,255,0.02);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; background:linear-gradient(180deg,#061018 0%, #071427 60%); color:#e6eef6}
+    a{color:var(--accent)}
+
+    header{display:flex;align-items:center;gap:16px;padding:18px 20px;background:transparent}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0ea5a9,#7c3aed);display:grid;place-items:center;font-weight:700}
+    h1{font-size:18px;margin:0}
+    .subtitle{font-size:12px;color:var(--muted)}
+
+    /* ========== Layout ========== */
+    .app{display:grid;grid-template-columns:260px 1fr;gap:22px;padding:20px}
+    .sidebar{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:18px;height:calc(100vh - 110px);overflow:auto}
+    .main{padding:10px}
+
+    /* Sidebar items */
+    .nav-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;color:var(--muted);cursor:pointer}
+    .nav-item:hover{background:var(--glass);color:#fff}
+    .nav-item.active{background:linear-gradient(90deg,#062d38, #0b2540);color:var(--accent)}
+
+    /* Cards */
+    .card{background:linear-gradient(180deg,var(--card), rgba(10,14,20,0.7));padding:16px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,0.4)}
+
+    /* Upload area */
+    .uploader{border:2px dashed rgba(255,255,255,0.05);padding:20px;border-radius:12px;text-align:center}
+    .uploader input{display:none}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,#0ea5a9,#7c3aed);color:#021220;font-weight:600;text-decoration:none}
+
+    /* Document list */
+    .doc-list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+    .doc-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:var(--glass-2)}
+    .doc-title{font-weight:600}
+
+    /* Main content columns */
+    .top-row{display:grid;grid-template-columns:1fr 420px;gap:18px}
+    .section{margin-bottom:16px}
+
+    /* Assessments panel */
+    .assess-list{display:flex;flex-direction:column;gap:10px}
+    .assess-item{padding:12px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent)}
+
+    /* Analytics */
+    .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    canvas{width:100%;height:210px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:10px}
+
+    /* Recommendations */
+    .rec-list{display:flex;flex-direction:column;gap:8px}
+    .rec{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+
+    footer{padding:12px 20px;color:var(--muted);font-size:13px}
+
+    /* Responsive */
+    @media (max-width:980px){.app{grid-template-columns:1fr} .top-row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">SF</div>
+      <div>
+        <h1>StudyFlow</h1>
+        <div class="subtitle">Personalized study system — prototype (HTML/CSS/JS)</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="sidebar card">
+      <div class="nav-item active" data-tab="upload">📁 Upload Documents</div>
+      <div class="nav-item" data-tab="assessments">📝 Assessments</div>
+      <div class="nav-item" data-tab="analytics">📊 Analytics</div>
+      <div class="nav-item" data-tab="recommend">💡 Recommendations</div>
+      <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:14px 0">
+      <div style="font-size:13px;color:var(--muted)">Local prototype: files processed in browser. To add AI-powered generation connect backend API (see settings).</div>
+    </aside>
+
+    <main class="main">
+      <!-- Upload / Document area -->
+      <section id="upload" class="section card">
+        <h2>1. Document processing</h2>
+        <p class="subtitle">Drag & drop PDFs or text files, or paste text. The system extracts plain text for assessment generation.</p>
+
+        <div class="uploader" id="dropzone">
+          <p>Drop files here or <label class="btn" for="fileinput">Choose files</label></p>
+          <input id="fileinput" type="file" multiple accept=".txt,.md,.pdf" />
+          <p class="subtitle">(PDF text extraction is basic — for robust PDF parsing integrate a server-side library.)</p>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <strong>Stored documents</strong>
+          <div class="doc-list" id="docList"></div>
+        </div>
+      </section>
+
+      <div class="top-row">
+        <section id="assessments" class="section card" style="display:none">
+          <h2>2. Automated assessment generation</h2>
+          <p class="subtitle">Generate quizzes from any uploaded document. This uses simple client-side heuristics — replace with an AI endpoint to improve quality.</p>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <label>Choose document:</label>
+            <select id="docSelect"></select>
+            <label>Questions:</label>
+            <input id="qCount" type="number" value="5" min="1" style="width:70px" />
+            <button class="btn" id="genBtn">Generate</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="assess-list" id="assessList"></div>
+          </div>
+        </section>
+
+        <aside id="sideCard" class="card" style="display:none">
+          <h3>Your quick tools</h3>
+          <div style="margin-top:8px">
+            <button class="btn" id="takeSample">Take sample quiz</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <strong>Recent activity</strong>
+            <div id="activity" style="font-size:13px;color:var(--muted);margin-top:6px">No activity yet.</div>
+          </div>
+        </aside>
+      </div>
+
+      <section id="analytics" class="section card" style="display:none">
+        <h2>3. Progress analytics</h2>
+        <p class="subtitle">Local progress stored in browser. Charts visualize accuracy, time spent, and weak topics.</p>
+        <div class="analytics-grid" style="margin-top:12px">
+          <div class="card">
+            <strong>Accuracy over attempts</strong>
+            <canvas id="accChart"></canvas>
+          </div>
+          <div class="card">
+            <strong>Question outcomes</strong>
+            <canvas id="outcomeChart"></canvas>
+          </div>
+        </div>
+
+        <div style="margin-top:12px" class="card">
+          <strong>Weak topic summary</strong>
+          <div id="weakTopics" style="margin-top:8px;color:var(--muted)">No data yet.</div>
+        </div>
+      </section>
+
+      <section id="recommend" class="section card" style="display:none">
+        <h2>4. AI-driven study recommendations</h2>
+        <p class="subtitle">Recommendations are generated from your weak topics and assessment history. This prototype uses heuristics; swap for an AI API to get personalized learning plans.</p>
+        <div class="rec-list" id="recList"></div>
+      </section>
+
+      <section id="settings" class="section card">
+        <h2>Settings & Integration</h2>
+        <p class="subtitle">How to make this production-grade:</p>
+        <ul class="subtitle">
+          <li>Move file parsing to server. Use NLP libraries (spaCy, NLTK) or a document AI service for semantic extraction.</li>
+          <li>Replace the heuristic generator with an LLM API that takes document text and returns structured questions + explanations.</li>
+          <li>Store user progress in a database and add authentication (JWT / OAuth).</li>
+        </ul>
+        <p class="subtitle">Below are placeholders for API keys (local only) and tips to connect:</p>
+        <div style="font-size:13px;color:var(--muted)">
+          <strong>LLM Endpoint</strong>
+          <input id="apiUrl" placeholder="https://your-api.example/v1/generate" style="width:100%;padding:8px;border-radius:8px;margin-top:6px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:#e6eef6" />
+          <input id="apiKey" placeholder="API Key (store securely on server!)" style="width:100%;padding:8px;border-radius:8px;margin-top:6px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:#e6eef6" />
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    Prototype — client-side only demo. To export: save this file as <code>studyflow.html</code> and open in a browser. Connect a backend to enable PDFs, large-file processing, and real AI-driven generation.
+  </footer>
+
+  <script>
+    // ========= Simple client-side document processing, assessment generator, analytics =========
+    const docs = []; // {id,title,text}
+    const assessments = []; // {id,docId,questions,results}
+    const results = JSON.parse(localStorage.getItem('sf_results')||'[]');
+
+    // UI refs
+    const dropzone = document.getElementById('dropzone');
+    const fileinput = document.getElementById('fileinput');
+    const docList = document.getElementById('docList');
+    const docSelect = document.getElementById('docSelect');
+    const genBtn = document.getElementById('genBtn');
+    const assessList = document.getElementById('assessList');
+    const activity = document.getElementById('activity');
+    const accChart = document.getElementById('accChart');
+    const outcomeChart = document.getElementById('outcomeChart');
+    const weakTopics = document.getElementById('weakTopics');
+    const recList = document.getElementById('recList');
+    const sideCard = document.getElementById('sideCard');
+
+    // Tabs
+    document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>{
+      document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+      el.classList.add('active');
+      const tab = el.getAttribute('data-tab');
+      ['upload','assessments','analytics','recommend'].forEach(t=>{
+        const node = document.getElementById(t);
+        if(node) node.style.display = (t===tab? 'block':'none');
+      });
+      sideCard.style.display = (tab==='assessments')? 'block':'none';
+      renderActivity(); renderAnalytics(); renderRecommendations();
+    }))
+
+    // Drag & drop
+    ['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      dropzone.addEventListener(evt,(e)=>{e.preventDefault();e.stopPropagation();});
+    });
+    dropzone.addEventListener('drop',e=>{handleFiles(e.dataTransfer.files)});
+    fileinput.addEventListener('change',e=>{handleFiles(e.target.files)});
+
+    function handleFiles(fileList){
+      [...fileList].forEach(file=>{
+        const reader = new FileReader();
+        if(file.name.endsWith('.pdf')){
+          // NOTE: in-browser PDF text extraction is limited. We'll attempt a naive approach with pdf.js if available.
+          reader.onload = ()=>{
+            // fallback: store filename and placeholder
+            const id = 'doc_'+Date.now();
+            docs.push({id,title:file.name,text:'(PDF upload saved; server-side parsing recommended)'});
+            refreshDocs();
+          }
+          reader.readAsArrayBuffer(file);
+        } else {
+          reader.onload = ()=>{
+            const id = 'doc_'+Date.now();
+            const text = reader.result;
+            docs.push({id,title:file.name,text});
+            refreshDocs();
+          }
+          reader.readAsText(file);
+        }
+      })
+    }
+
+    function refreshDocs(){
+      docList.innerHTML=''; docSelect.innerHTML='';
+      docs.forEach(d=>{
+        const el = document.createElement('div'); el.className='doc-item';
+        el.innerHTML = `<div><div class="doc-title">${escapeHtml(d.title)}</div><div style="font-size:12px;color:var(--muted)">${truncate(d.text,120)}</div></div><div><button class='btn' data-open='${d.id}'>Open</button></div>`;
+        docList.appendChild(el);
+        const opt = document.createElement('option'); opt.value=d.id; opt.textContent=d.title; docSelect.appendChild(opt);
+      });
+      document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',e=>{
+        const id = e.target.getAttribute('data-open');
+        const doc = docs.find(x=>x.id===id);
+        showModal('Document: '+doc.title, `<pre style="white-space:pre-wrap;max-height:300px;overflow:auto">${escapeHtml(doc.text)}</pre>`);
+      }))
+    }
+
+    // Simple assessment generator: create fill-in-the-blank / MCQ by masking nouns (heuristic)
+    genBtn.addEventListener('click',()=>{
+      const docId = docSelect.value; if(!docId) return alert('Choose a document');
+      const qCount = parseInt(document.getElementById('qCount').value||5);
+      const doc = docs.find(d=>d.id===docId);
+      const questions = generateQuestionsFromText(doc.text, qCount);
+      const as = {id:'ass_'+Date.now(), docId, questions, results:[]};
+      assessments.unshift(as);
+      renderAssessments();
+      renderActivity();
+    })
+
+    function generateQuestionsFromText(text, n){
+      // Heuristic: split into sentences, pick longest sentences, mask a word.
+      if(!text) return [];
+      const sents = text.split(/[\.\n\?\!]+/).map(s=>s.trim()).filter(Boolean);
+      sents.sort((a,b)=>b.length-a.length);
+      const chosen = sents.slice(0, Math.min(n, sents.length));
+      const qs = chosen.map(s=>{
+        const words = s.split(/\s+/).filter(w=>w.length>3);
+        if(words.length===0) return null;
+        const idx = Math.floor(Math.random()*Math.min(3,words.length));
+        const answer = words[idx].replace(/[^a-zA-Z]/g,'');
+        // make 3 distractors by sampling other words
+        const pool = text.split(/\s+/).filter(w=>w.length>3).map(w=>w.replace(/[^a-zA-Z]/g,''));
+        const distractors = shuffle(pool.filter(p=>p.toLowerCase()!==answer.toLowerCase())).slice(0,3);
+        const choices = shuffle([answer,...distractors]);
+        return {type:'mcq', prompt: s.replace(answer, '_____'), answer, choices}
+      }).filter(Boolean);
+      return qs;
+    }
+
+    function renderAssessments(){
+      assessList.innerHTML='';
+      assessments.forEach(a=>{
+        const el = document.createElement('div'); el.className='assess-item';
+        el.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'><div><strong>Quiz from: ${escapeHtml(docs.find(d=>d.id===a.docId)?.title||'unknown')}</strong><div style="font-size:13px;color:var(--muted)">${a.questions.length} questions</div></div><div><button class='btn' data-take='${a.id}'>Take</button></div></div>`;
+        assessList.appendChild(el);
+      });
+      document.querySelectorAll('[data-take]').forEach(b=>b.addEventListener('click',e=>{
+        const aid = e.target.getAttribute('data-take'); startQuiz(aid);
+      }))
+    }
+
+    function startQuiz(aid){
+      const a = assessments.find(x=>x.id===aid); if(!a) return;
+      let idx=0; const responses=[]; const start=Date.now();
+      function showQ(){
+        const q = a.questions[idx];
+        const html = `<div><div style="font-weight:700">Q${idx+1}. ${escapeHtml(q.prompt)}</div>`+
+                     q.choices.map((c,i)=>`<div style="margin-top:8px"><label><input type='radio' name='choice' value='${escapeHtml(c)}'/> ${escapeHtml(c)}</label></div>`).join('')+
+                     `<div style='margin-top:12px'><button class='btn' id='nextBtn'>${idx+1===a.questions.length? 'Submit':'Next'}</button></div></div>`;
+        showModal('Quiz', html);
+        document.getElementById('nextBtn').addEventListener('click',()=>{
+          const sel = document.querySelector('input[name=choice]:checked');
+          responses.push(sel?sel.value:null);
+          idx++;
+          if(idx<a.questions.length){ showQ(); } else { closeModal(); finishQuiz(); }
+        })
+      }
+      showQ();
+      function finishQuiz(){
+        const end=Date.now(); const time=(end-start)/1000;
+        let correct=0; const weak=[];
+        a.questions.forEach((q,i)=>{ if(responses[i] && responses[i].toLowerCase()===q.answer.toLowerCase()) correct++; else weak.push(q.prompt) });
+        const score = Math.round(100*(correct/a.questions.length));
+        const record = {time,score,timestamp:new Date().toISOString(),weak};
+        results.push(record); localStorage.setItem('sf_results',JSON.stringify(results));
+        activity.innerHTML = `Latest: scored ${score}% on ${(new Date()).toLocaleString()}`;
+        renderAnalytics(); renderRecommendations();
+        showModal('Results', `<div><strong>Score: ${score}%</strong><div style='margin-top:8px'>Time: ${Math.round(time)}s</div><div style='margin-top:8px'><strong>Weak questions:</strong><pre style='white-space:pre-wrap'>${escapeHtml(weak.join('\n'))||'None'}</pre></div></div>`);
+      }
+    }
+
+    // Analytics render
+    function renderAnalytics(){
+      // accuracy over attempts
+      const ctx = accChart.getContext('2d'); ctx.clearRect(0,0,accChart.width,accChart.height);
+      const data = results.map(r=>r.score);
+      drawLineChart(ctx,data);
+
+      // outcomes pie (simple counts)
+      const ctx2 = outcomeChart.getContext('2d'); ctx2.clearRect(0,0,outcomeChart.width,outcomeChart.height);
+      const pass = results.filter(r=>r.score>=70).length; const fail = results.length-pass;
+      drawBarChart(ctx2, [{label:'Pass',v:pass},{label:'Fail',v:fail}]);
+
+      // weak topics
+      const allWeak = results.flatMap(r=>r.weak||[]);
+      const counts = {}; allWeak.forEach(w=>counts[w]= (counts[w]||0)+1);
+      const keys = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      weakTopics.innerHTML = keys.length? keys.map(k=>`• ${escapeHtml(k[0].slice(0,120))} — ${k[1]} times`).join('<br>') : '<span style="color:var(--muted)">No weak topics recorded yet.</span>';
+    }
+
+    function renderRecommendations(){
+      recList.innerHTML='';
+      // Heuristic: if accuracy <80 recommend review; if weak topics exist, suggest micro-tasks.
+      const avg = results.length? Math.round(results.reduce((s,r)=>s+r.score,0)/results.length):null;
+      if(avg!==null){
+        const el = document.createElement('div'); el.className='rec'; el.innerHTML = `<strong>Overall performance:</strong> ${avg}% average across ${results.length} attempts.`;
+        recList.appendChild(el);
+      }
+      const allWeak = results.flatMap(r=>r.weak||[]);
+      const keys = [...new Set(allWeak)].slice(0,6);
+      if(keys.length){
+        keys.forEach(k=>{
+          const div = document.createElement('div'); div.className='rec';
+          div.innerHTML = `<strong>Revise:</strong> ${escapeHtml(k.slice(0,120))}<div style='font-size:13px;color:var(--muted)'>Suggested micro-task: re-read section, write 3 summary sentences, create 2 flashcards.</div>`;
+          recList.appendChild(div);
+        })
+      } else if(avg!==null && avg<80){
+        const div = document.createElement('div'); div.className='rec'; div.innerHTML = `<strong>Recommendation:</strong> Focused review sessions (20–30 minutes) + spaced repetition. Generate 10 flashcards from your documents.`;
+        recList.appendChild(div);
+      } else {
+        const div = document.createElement('div'); div.className='rec'; div.innerHTML = `<strong>You're doing well!</strong> Try challenge quizzes or timed practice.`;
+        recList.appendChild(div);
+      }
+    }
+
+    // Activity render
+    function renderActivity(){
+      activity.innerHTML = results.length? `Latest: scored ${results[results.length-1].score}% on ${(new Date(results[results.length-1].timestamp)).toLocaleString()}` : 'No activity yet.';
+    }
+
+    // Simple chart helpers (canvas drawings)
+    function drawLineChart(ctx,data){
+      const w=ctx.canvas.width, h=ctx.canvas.height; if(!data.length) return;
+      const max = Math.max(...data,100);
+      ctx.beginPath(); ctx.lineWidth=2; ctx.strokeStyle='#6ee7b7';
+      for(let i=0;i<data.length;i++){
+        const x = (i/(data.length-1||1))*(w-20)+10; const y = h-10 - (data[i]/max)*(h-20);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      // points
+      ctx.fillStyle='#e6eef6'; data.forEach((v,i)=>{ const x=(i/(data.length-1||1))*(w-20)+10; const y=h-10-(v/max)*(h-20); ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill(); })
+    }
+    function drawBarChart(ctx,arr){
+      const w=ctx.canvas.width, h=ctx.canvas.height; const gap=12; const bw = (w - gap*(arr.length+1))/arr.length;
+      const max = Math.max(...arr.map(a=>a.v),1);
+      arr.forEach((a,i)=>{ const x = gap + i*(bw+gap); const hh = (a.v/max)*(h-40); ctx.fillStyle='#6ee7b7'; ctx.fillRect(x,h-30-bb(hh),bw,bb(hh)); ctx.fillStyle='#e6eef6'; ctx.fillText(a.label, x+6, h-10); ctx.fillText(String(a.v), x+6, h-40-bb(hh)); })
+    }
+    function bb(x){return Math.max(2,Math.round(x))}
+
+    // Modal helpers
+    let modalEl=null;
+    function showModal(title,html){
+      if(modalEl) closeModal();
+      modalEl = document.createElement('div'); modalEl.style.position='fixed'; modalEl.style.left=0; modalEl.style.top=0; modalEl.style.right=0; modalEl.style.bottom=0; modalEl.style.display='grid'; modalEl.style.placeItems='center'; modalEl.style.background='rgba(2,6,10,0.6)';
+      modalEl.innerHTML = `<div style='width:90%;max-width:760px;background:${getComputedStyle(document.body).background};padding:18px;border-radius:12px'>
+        <div style='display:flex;justify-content:space-between;align-items:center'><strong>${escapeHtml(title)}</strong><button id='closeModal' class='btn'>Close</button></div>
+        <div style='margin-top:12px;color:#e6eef6'>${html}</div>
+      </div>`;
+      document.body.appendChild(modalEl);
+      document.getElementById('closeModal').addEventListener('click',closeModal);
+    }
+    function closeModal(){ if(modalEl){ modalEl.remove(); modalEl=null } }
+
+    // Utilities
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function truncate(s,n){ return s.length>n? s.slice(0,n)+'...':s }
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+
+    // sample generate & sample quiz
+    document.getElementById('takeSample').addEventListener('click',()=>{
+      if(!docs.length) {
+        docs.push({id:'doc_sample',title:'Sample: Photosynthesis', text:`Photosynthesis is a process used by plants and other organisms to convert light energy into chemical energy. It typically involves the green pigment chlorophyll and generates oxygen as a byproduct. Oxygen produced during photosynthesis supports aerobic life.`});
+        refreshDocs();
+      }
+      const docId = docs[0].id; docSelect.value = docId; genBtn.click(); // generate
+      setTimeout(()=>{ if(assessments[0]) startQuiz(asses
